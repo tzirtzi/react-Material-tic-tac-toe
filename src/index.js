@@ -2,6 +2,13 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
 
+import Button from '@material-ui/core/Button';
+import ButtonGroup from '@material-ui/core/ButtonGroup';
+import List from '@material-ui/core/List';
+
+import Card from '@material-ui/core/Card';
+import CardContent from '@material-ui/core/CardContent';
+import Typography from '@material-ui/core/Typography';
 
 // class Square extends React.Component {
 //     // constructor(props) {
@@ -23,11 +30,46 @@ import './index.css';
 //         );
 //     }
 // }
- function Square(props) {
+
+/** Tzirtzi : added internationalization */
+class LanguageItem extends React.Component {
+    render() {
+        // let binder = this.props.IslastItem ? '' : ' | '; 
+
+        return (
+            <span>
+                <Button onClick={()=> this.props.onClick(this.props.value) }>
+                    {this.props.value}
+                </Button>
+                {/*binder*/} 
+            </span>
+        ); 
+    }
+}
+
+class LanguageArray extends React.Component {
+
+    // props of type [{code:... descr:...},{},]
+    render() {
+        return(
+            this.props.value.map(
+                (item, index, array) => { return (
+                        <LanguageItem key={item.code}
+                            value={t(item.descr, this.props.currentLanguage )}
+                            onClick={()=>this.props.onClick(item.code)}
+                            // IslastItem={index === array.length-1}
+                        /> 
+                    )
+            })
+        )
+    }
+}
+
+function Square(props) {
     return (
-        <button className="square" onClick={ props.onClick } >
+        <div className="square" onClick={ props.onClick } >
             {props.value}
-        </button>
+        </div>
     );
 }
 
@@ -112,19 +154,25 @@ class Game extends React.Component {
             }],
             stepNumber: 0,
             xIsNext: true,
+            languageCode: 'el'
         };
     }
-    
+
     getNextPlayer() {
         return this.state.xIsNext? 'X' : 'O';
     }
 
+    setLanguageCode(lanCode){
+        this.setState({
+            languageCode: lanCode
+        });
+    }
+    
     handleClick(i){
-
+        const language = this.state.languageCode;
         const move = this.state.stepNumber;
-        const history = this.state.history;
-        const current = history[this.state.stepNumber];
-        // make a copy of the array
+        const history = this.state.history.slice(0, move+1);
+        const current = history[history.length -1];
         const squares = current.squares.slice();
 
         if (calculateWinner(squares) || squares[i]) {
@@ -136,7 +184,8 @@ class Game extends React.Component {
                 squares: squares,
             }]),
             stepNumber: move+1,
-            xIsNext: !this.state.xIsNext
+            xIsNext: !this.state.xIsNext,
+            languageCode: language
         });
     }
 
@@ -149,42 +198,66 @@ class Game extends React.Component {
     }
 
     render() {
+        const lan = this.state.languageCode;
         const history = this.state.history;
         const current = history[this.state.stepNumber];
         const winner = calculateWinner(current.squares);
-
+        
         const moves = history.map((step,move) => {
             //on first move, move = 0
-            const descr = move ? `Go to move ${move}` : `Go to Start`;
+            const descr = move ? `${t('Go to move', lan)} ${move}` : `${t('Go to start',lan)}`;
             return (
                 <li key={move}>
-                    <button onClick={()=> this.jumpTo(move)}>
+                    <Button
+                        variant="contained" color="primary" 
+                        onClick={()=> this.jumpTo(move)}>
                         {descr}
-                    </button>
+                    </Button>
                 </li>
             )
         });
 
         let status;
         if (winner) {
-            status = `Winner: ${winner}`; 
+            status = `${t('Winner', lan)}: ${winner}`; 
         } else {
-            status = `Next player: ${this.getNextPlayer()}`;
+            status = `${t('Next player', lan)}: ${this.getNextPlayer()}`;
         }
 
         return (
         <div className="game">
-            <div className="game-board">
-            <Board 
-                squares={current.squares}
-                onClick={(i)=> this.handleClick(i)}
-            />
+                    <div className="game-board">
+                        <Card>
+                            <CardContent>
+                                <Board 
+                                    squares={current.squares}
+                                    onClick={(i)=> this.handleClick(i)}
+                                />
+                            </CardContent>
+                        </Card>
+                    </div>
+                    <Card>
+                        <CardContent>
+
+                            <ButtonGroup variant="contained" color="primary" aria-label="outlined primary button group">
+                                <LanguageArray
+                                    value={languageChoices()}
+                                    currentLanguage={this.state.languageCode}
+                                    onClick={(lanCode)=> this.setLanguageCode(lanCode)}
+                                />
+                            </ButtonGroup>
+                            <hr/>
+                            <Typography color="textSecondary" gutterBottom>
+                                {status}
+                            </Typography>
+                            <hr/>
+                            <List component="nav" aria-label="contacts">
+                                {moves}
+                            </List>
+
+                        </CardContent>
+                    </Card>
             </div>
-            <div className="game-info">
-            <div>{status}</div>
-            <ol>{moves}</ol>
-            </div>
-        </div>
         );
     }
 }
@@ -196,7 +269,52 @@ ReactDOM.render(
     document.getElementById('root')
 );
 
+//Tzirti Internationalization 
+// simplification after i18next
+function languageChoices() {
+    return [
+        {'code':'en', 'descr': 'English'},
+        {'code':'el', 'descr': 'Greek' } 
+    ]
+}
 
+function t( textName, languageCode) {
+    // console.log(textName,languageCode )
+    if (!textName) {
+        return ''
+    }
+
+    const txts = {
+        'English': {
+            'en': 'English',
+            'el': 'Αγγλικα'
+        },
+        'Greek': {
+            'en': 'Greek',
+            'el': 'Ελληνικα'
+        },
+        'Winner': {
+            'en': 'Winner',
+            'el': 'Νικητης'
+        },
+        'Next player': {
+            'en':'Next player',
+            'el':'Επόμενος Παίκτης'
+        },
+        'Go to move': {
+            'en': 'Go to move',
+            'el': 'Επιστροφη στην κινηση'
+        },
+        'Go to start': {
+            'en': 'Go to start',
+            'el': 'Επιστροφη στην αρχη'
+        }
+    }
+
+    return txts[textName][languageCode];
+}
+
+// Calculate winner
 function calculateWinner(squares) {
     const lines = [
       [0, 1, 2],
